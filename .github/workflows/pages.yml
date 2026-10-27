@@ -84,3 +84,27 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Smoke-test published site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          set -euo pipefail
+          PAGE_URL="${PAGE_URL%/}"
+          curl --fail --silent --show-error --location --retry 5 --retry-delay 3 "$PAGE_URL/" -o /tmp/ayat-live.html
+          curl --fail --silent --show-error --location "$PAGE_URL/manifest.json" -o /tmp/ayat-live-manifest.json
+          curl --fail --silent --show-error --location "$PAGE_URL/sw.js" -o /tmp/ayat-live-sw.js
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          html = Path("/tmp/ayat-live.html").read_text(encoding="utf-8")
+          manifest = json.loads(Path("/tmp/ayat-live-manifest.json").read_text(encoding="utf-8"))
+          sw = Path("/tmp/ayat-live-sw.js").read_text(encoding="utf-8")
+          for marker in ['id="arabic"', 'id="btn"', 'id="cacheAudio"', 'id="suraAudio"']:
+              if marker not in html:
+                  raise SystemExit("Published page is missing: " + marker)
+          if not manifest.get("name", "").startswith("Аят"):
+              raise SystemExit("Published manifest is invalid")
+          if "ayat-audio-v1" not in html and "ayat-audio-v1" not in sw:
+              raise SystemExit("Audio cache support is missing from published assets")
+          print("Published HTML, manifest and service worker passed smoke tests.")
+          PY
