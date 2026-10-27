@@ -92,7 +92,7 @@ function speakList(list){
   try{
    refreshRussianVoices();
    const voices=[...new Map([...russianVoiceCache,...speechSynthesis.getVoices()].filter(z=>z.lang&&z.lang.toLowerCase().startsWith('ru')).map(z=>[(z.voiceURI||'')+'|'+z.name,z])).values()];
-   const preferred=(isAppleMobile?voices.find(z=>/milena/i.test((z.name||'')+' '+(z.voiceURI||'')):null)||voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name+' '+z.voiceURI))||voices.find(z=>/milena|юрий|yuri/i.test(z.name+' '+z.voiceURI))||voices[0];
+   const preferred=(isAppleMobile?voices.find(z=>/milena/i.test((z.name||'')+' '+(z.voiceURI||''))):null)||voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name+' '+z.voiceURI))||voices.find(z=>/milena|юрий|yuri/i.test(z.name+' '+z.voiceURI))||voices[0];
    if(preferred)u.voice=preferred;
    u._ayatVoiceLabel=preferred?preferred.name+' ('+preferred.lang+')':'голос по умолчанию — список русских голосов пуст';
   }catch(e){}
