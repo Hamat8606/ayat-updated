@@ -74,28 +74,25 @@ function onres(ev){
 function finish(){queue.push(v);const list=queue.slice();queue=[];exp=v;v=null;ptr=0;log('конец аята');saveCompleted(list);speakList(list)}
 function speakList(list){
  speaking=true;try{if(rec)rec.stop()}catch(e){}
- let verseIndex=0,chunkIndex=0,activeToken=0,watchdog=null,unlockTimer=null;
+ let verseIndex=0,activeToken=0,watchdog=null,unlockTimer=null;
  const cleanup=()=>{if(watchdog)clearTimeout(watchdog);if(unlockTimer)clearTimeout(unlockTimer);watchdog=unlockTimer=null};
- const chunksOf=text=>{
-  const words=text.trim().split(/\s+/).filter(Boolean),chunks=[];let part='';
-  for(const word of words){const candidate=part?part+' '+word:word;if(part&&candidate.length>125){chunks.push(part);part=word}else part=candidate}
-  if(part)chunks.push(part);return chunks.length?chunks:[''];
- };
- const advance=token=>{if(token!==activeToken)return;cleanup();chunkIndex++;setTimeout(playChunk,450)};
+ const advance=token=>{if(token!==activeToken)return;cleanup();verseIndex++;setTimeout(playChunk,550)};
  const playChunk=()=>{
   if(!on||verseIndex>=list.length){cleanup();speaking=false;if(on&&!paused)startRec();render();return}
   shown=V[list[verseIndex]];render();
-  if(!$('audioToggle').checked){verseIndex++;chunkIndex=0;setTimeout(playChunk,900);return}
-  const chunks=chunksOf(shown.ru);
-  if(chunkIndex>=chunks.length){verseIndex++;chunkIndex=0;setTimeout(playChunk,550);return}
+  if(!$('audioToggle').checked){verseIndex++;setTimeout(playChunk,900);return}
   const token=++activeToken;let done=false;
   const finish=()=>{if(done||token!==activeToken)return;done=true;advance(token)};
   try{speechSynthesis.resume()}catch(e){}
-  const u=new SpeechSynthesisUtterance(chunks[chunkIndex]);u.lang='ru-RU';u.rate=0.92;
-  try{const voices=speechSynthesis.getVoices();const voice=voices.find(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));if(voice)u.voice=voice}catch(e){}
+  const u=new SpeechSynthesisUtterance(shown.ru);u.lang='ru-RU';u.rate=0.88;u.volume=1;
+  try{
+   const voices=speechSynthesis.getVoices().filter(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));
+   const preferred=voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name))||voices.find(z=>/milena|юрий|yuri/i.test(z.name))||voices[0];
+   if(preferred)u.voice=preferred;
+  }catch(e){}
   u.onend=finish;u.onerror=finish;
-  u.onstart=()=>{if(watchdog)clearTimeout(watchdog);watchdog=setTimeout(()=>{if(done||token!==activeToken)return;done=true;try{speechSynthesis.cancel()}catch(e){}cleanup();setTimeout(()=>{if(token===activeToken){chunkIndex++;playChunk()}},500)},Math.max(10000,chunks[chunkIndex].length*240))};
-  watchdog=setTimeout(()=>{if(done||token!==activeToken)return;done=true;try{speechSynthesis.cancel()}catch(e){}cleanup();setTimeout(()=>{if(token===activeToken){chunkIndex++;playChunk()}},500)},Math.max(14000,chunks[chunkIndex].length*300));
+  u.onstart=()=>{if(watchdog)clearTimeout(watchdog);watchdog=setTimeout(()=>{if(done||token!==activeToken)return;done=true;try{speechSynthesis.cancel()}catch(e){}cleanup();setTimeout(()=>{if(token===activeToken){advance(token)}},700)},Math.max(20000,shown.ru.length*700))};
+  watchdog=setTimeout(()=>{if(done||token!==activeToken)return;done=true;try{speechSynthesis.cancel()}catch(e){}cleanup();setTimeout(()=>{if(token===activeToken){advance(token)}},700)},Math.max(25000,shown.ru.length*850));
   unlockTimer=setTimeout(()=>{try{speechSynthesis.resume()}catch(e){}},2200);
   try{speechSynthesis.speak(u)}catch(e){finish()}
  };
