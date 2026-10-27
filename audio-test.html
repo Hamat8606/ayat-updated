@@ -20,7 +20,7 @@ small{color:#a0a5a8}
 <small>Пока подготовлены только 7 аятов Аль-Фатихи. Остальные аяты остаются на штатном синтезе. Это отдельная тестовая страница; основной экран приложения и защищённый репозиторий не меняются.</small>
 <div id="testStatus" role="status">Подготавливаю аудиоперехват…</div>
 </section>
-<iframe id="app" title="Экспериментальная версия Аят" src="https://raw.githack.com/Hamat8606/ayat-updated/experiment/russian-audio-translation/index.html" allow="microphone"></iframe>
+<iframe id="app" title="Экспериментальная версия Аят" src="https://raw.githack.com/Hamat8606/ayat-updated/147fe35ba481ecf71af5b1779ef17caf2f32ee4a/index.html" allow="microphone"></iframe>
 <script>
 (() => {
 const frame=document.getElementById('app');
@@ -50,10 +50,10 @@ frame.addEventListener('load',()=>{
    const a=new w.Audio('https://raw.githubusercontent.com/Hamat8606/ayat-updated/experiment/russian-audio-translation/generated-audio/ru/1/'+ayah+'.mp3');
    activeAudio=a;
    let completed=false;
-   const finish=()=>{if(completed)return;completed=true;if(activeAudio===a)activeAudio=null;if(typeof utterance.onend==='function')utterance.onend(new w.SpeechSynthesisEvent('end',{utterance}));};
+   const finish=()=>{if(completed)return;completed=true;if(activeAudio===a)activeAudio=null;if(typeof utterance.onend==='function')utterance.onend();};
    a.onended=finish;
    a.onerror=()=>{status.textContent='Не удалось загрузить MP3 аята '+ayah+'. Проверьте интернет; перехожу к системному голосу.';if(activeAudio===a)activeAudio=null;originalSpeak(utterance)};
-   if(typeof utterance.onstart==='function')utterance.onstart(new w.SpeechSynthesisEvent('start',{utterance}));
+   if(typeof utterance.onstart==='function')utterance.onstart();
    status.textContent='Подключена заготовленная озвучка: Аль-Фатиха, аят '+ayah;
    a.play().catch(()=>{if(activeAudio===a)activeAudio=null;status.textContent='Браузер не запустил MP3; использую системный голос.';originalSpeak(utterance)});
   };
