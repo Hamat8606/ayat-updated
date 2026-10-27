@@ -40,7 +40,7 @@ const $=id=>document.getElementById(id);
 let on=false,rec=null,v=null,ptr=0,base=0,pend=null,timer=null,queue=[],speaking=false,exp=null,shown=null,heard='',L=[],paused=false,lastAccuracy=0,wakeLock=null,speechRun=0;const t0=Date.now();
 function log(m){/* Технические события не попадают в журнал пользователя. */}
 function render(){const x=speaking&&shown?shown:(v!==null?V[v]:null);$('ref').textContent=x?'Сура '+x.s+' · Аят '+x.a:'';$('arabic').innerHTML='';if(x){x.w.forEach((word,i)=>{const el=document.createElement('span');el.className='word'+(x===V[v]&&i<ptr?' read':'')+(x===V[v]&&i===ptr?' current':'');el.textContent=word;$('arabic').appendChild(el);if(i<x.w.length-1)$('arabic').appendChild(document.createTextNode(' '))})}$('tr').textContent=x?x.ru:'';$('btn').textContent=paused?'Продолжить':!on?'Начать':speaking?'Перевод…':'Стоп';$('btn').className=on&&!speaking?'on':'';if(!paused)$('st').textContent=!on?'':speaking?'Читается перевод…':(v===null?'Слушаю чтение':'')}
-function words(ev){let cur=[];for(let i=0;i<ev.results.length;i++){const w=norm(ev.results[i][0].transcript).split(' ').filter(Boolean);if(!w.length)continue;if(cur.length&&sim(w[0],cur[0])>=0.6)cur=w;else cur=cur.concat(w)}return cur}
+function words(ev){const out=[];for(let i=0;i<ev.results.length;i++){const w=norm(ev.results[i][0].transcript).split(' ').filter(Boolean);if(w.length)out.push(...w)}return out}
 function lock(acc){
  const ex=exp!==null;if(acc.length<(ex?2:3))return;
  const m=Math.min(5,acc.length),q=acc.slice(-m);
