@@ -55,10 +55,10 @@ jobs:
               raise SystemExit("Duplicate HTML ids: " + ", ".join(duplicates))
           if missing:
               raise SystemExit("Missing required HTML ids: " + ", ".join(missing))
-          scripts = re.findall(r'<script\\b([^>]*)>(.*?)</script\\s*>', html, re.I | re.S)
+          scripts = re.findall(r'<script\b([^>]*)>(.*?)</script\s*>', html, re.I | re.S)
           n = 0
           for attrs, body in scripts:
-              if re.search(r'type\\s*=\\s*["\\']application/json["\\']', attrs, re.I):
+              if re.search(r"type\s*=\s*['\"]application/json['\"]", attrs, re.I):
                   continue
               n += 1
               Path(f"/tmp/ayat-script-{n}.js").write_text(body, encoding="utf-8")
