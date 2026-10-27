@@ -87,7 +87,7 @@ function speakList(list){
   const token=++activeToken;let done=false;
   const finish=()=>{if(run!==speechRun||done||token!==activeToken)return;done=true;advance(token)};
   try{speechSynthesis.resume()}catch(e){}
-  const u=new SpeechSynthesisUtterance(shown.ru);u.lang='ru-RU';u.rate=0.88;u.volume=1;
+  const speechText=shown.ru.replace(/[«»]/g,'');const u=new SpeechSynthesisUtterance(speechText);u.lang='ru-RU';u.rate=0.88;u.volume=1;
   try{
    const voices=speechSynthesis.getVoices().filter(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));
    const preferred=voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name))||voices.find(z=>/milena|юрий|yuri/i.test(z.name))||voices[0];
