@@ -15,7 +15,7 @@ permissions:
 jobs:
   generate-test-audio:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout experiment branch
         uses: actions/checkout@v4
@@ -30,6 +30,16 @@ jobs:
 
       - name: Install Edge TTS
         run: python -m pip install --upgrade pip edge-tts
+
+      - name: Obtain source recording from IslamHouse
+        run: |
+          mkdir -p generated-audio/source
+          curl --fail --location --retry 3 --retry-delay 2 \
+            'https://d1.islamhouse.com/data/ru/ih_sounds/chain/ru_Quran_Russian/ru_Quran_Russian_001.mp3' \
+            --output generated-audio/source/ru_Quran_Russian_001.mp3
+          test -s generated-audio/source/ru_Quran_Russian_001.mp3
+          file generated-audio/source/ru_Quran_Russian_001.mp3
+          wc -c generated-audio/source/ru_Quran_Russian_001.mp3
 
       - name: Generate Al-Fatiha (7 verses only)
         run: python tools/generate_ru_audio.py --surah 1 --voice ru-RU-SvetlanaNeural
@@ -51,9 +61,12 @@ jobs:
               size = path.stat().st_size
               assert size > 1000, f"MP3 unexpectedly small: {path} ({size} bytes)"
               files.append((path.as_posix(), size))
-          print("Verified seven non-empty MP3 files:")
+          source = root / "source" / "ru_Quran_Russian_001.mp3"
+          assert source.is_file() and source.stat().st_size > 1000, "Source recording is missing or unexpectedly small"
+          print("Verified seven generated MP3 files:")
           for path, size in files:
               print(f"{path}: {size:,} bytes")
+          print(f"Original IslamHouse MP3: {source.stat().st_size:,} bytes")
           print(f"Manifest entries for Al-Fatiha: {sum(1 for k in manifest if k.startswith('1:'))}")
           PY
 
@@ -62,10 +75,10 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           root = Path("generated-audio")
-          cards = []
+          cards = ['<section><h2>Исходная запись IslamHouse</h2><audio controls preload="none" src="source/ru_Quran_Russian_001.mp3"></audio><p><a href="source/ru_Quran_Russian_001.mp3" download>Скачать исходный MP3</a></p></section>']
           for ayah in range(1, 8):
               cards.append(f"""
-              <section><h2>Аят {ayah}</h2>
+              <section><h2>Синтезированный аят {ayah}</h2>
                 <audio controls preload="none" src="ru/1/{ayah}.mp3"></audio>
                 <p><a href="ru/1/{ayah}.mp3" download>Скачать MP3</a></p>
               </section>""")
@@ -74,12 +87,12 @@ jobs:
           <title>Аят — тест русской озвучки Аль-Фатихи</title>
           <style>body{font:17px system-ui,sans-serif;max-width:760px;margin:24px auto;padding:0 16px;line-height:1.5}section{padding:12px 0;border-bottom:1px solid #ddd}audio{width:100%}</style>
           </head><body><h1>Аль-Фатиха — тест русской озвучки</h1>
-          <p>Экспериментальная генерация Edge TTS. Это локальная тестовая страница внутри артефакта; она не публикуется в основной версии приложения.</p>
+          <p>Сравнение исходной записи с тестовым синтезом Edge TTS. Это локальная страница внутри артефакта; она не публикуется в основной версии приложения.</p>
           """ + "\n".join(cards) + "</body></html>"
           (root / "preview.html").write_text(html, encoding="utf-8")
           PY
 
-      - name: Upload test package
+      - name: Upload source and test package
         uses: actions/upload-artifact@v4
         with:
           name: ayat-al-fatiha-russian-audio-test
