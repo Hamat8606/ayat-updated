@@ -80,12 +80,11 @@ function speakList(list){
   const u=new SpeechSynthesisUtterance(shown.ru);u.lang='ru-RU';
   let voices=[];try{voices=speechSynthesis.getVoices()}catch(e){}
   const vo=voices.find(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));if(vo)u.voice=vo;
-  let advanced=false,watchdog=null;const next=()=>{if(advanced)return;advanced=true;if(watchdog)clearTimeout(watchdog);setTimeout(()=>go(i+1),700)};
-  u.onend=next;u.onerror=next;u.onstart=()=>{if(watchdog)clearTimeout(watchdog);watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(7000,shown.ru.length*180))};
-  watchdog=setTimeout(()=>{try{speechSynthesis.resume()}catch(e){}},1800);
+  let advanced=false,unlockTimer=null,watchdog=null;const next=()=>{if(advanced)return;advanced=true;if(unlockTimer)clearTimeout(unlockTimer);if(watchdog)clearTimeout(watchdog);setTimeout(()=>go(i+1),700)};
+  u.onend=next;u.onerror=next;u.onstart=()=>{if(unlockTimer)clearTimeout(unlockTimer);if(watchdog)clearTimeout(watchdog);watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(9000,shown.ru.length*220))};
+  unlockTimer=setTimeout(()=>{try{speechSynthesis.resume()}catch(e){}},1800);
+  watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(12000,shown.ru.length*260));
   speechSynthesis.speak(u);
-  if(!watchdog)watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(9000,shown.ru.length*220));
-  else {clearTimeout(watchdog);watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(9000,shown.ru.length*220))}
  };
  go(0)}
 function startRec(){
