@@ -90,7 +90,7 @@ function speakList(list){
   const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent);const speechText=isAppleMobile?shown.ru.replace(/[«»]/g,''):shown.ru;const u=new SpeechSynthesisUtterance(speechText);u.lang='ru-RU';u.rate=0.88;u.volume=1;
   try{
    const voices=speechSynthesis.getVoices().filter(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));
-   const preferred=voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name))||voices.find(z=>/milena|юрий|yuri/i.test(z.name))||voices[0];
+   const preferred=(isAppleMobile?voices.find(z=>/milena/i.test(z.name)):null)||voices.find(z=>/enhanced|premium|natural|расширенн|улучшенн/i.test(z.name))||voices.find(z=>/milena|юрий|yuri/i.test(z.name))||voices[0];
    if(preferred)u.voice=preferred;
   }catch(e){}
   u.onend=finish;u.onerror=finish;
