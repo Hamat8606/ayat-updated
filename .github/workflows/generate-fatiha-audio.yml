@@ -7,10 +7,11 @@ on:
       - 'tools/generate_ru_audio.py'
       - 'index.html'
       - '.github/workflows/generate-fatiha-audio.yml'
+      - 'audio-test.html'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   generate-test-audio:
@@ -53,20 +54,12 @@ jobs:
           expected = [f"1:{i}" for i in range(1, 8)]
           missing = [key for key in expected if key not in manifest]
           assert not missing, f"Manifest missing verses: {missing}"
-          files = []
           for ayah in range(1, 8):
               path = root / "ru" / "1" / f"{ayah}.mp3"
-              assert path.is_file(), f"Missing MP3: {path}"
-              size = path.stat().st_size
-              assert size > 1000, f"MP3 unexpectedly small: {path} ({size} bytes)"
-              files.append((path.as_posix(), size))
+              assert path.is_file() and path.stat().st_size > 1000, f"Invalid MP3: {path}"
           source = root / "source" / "ru_Quran_Russian_001.mp3"
-          assert source.is_file() and source.stat().st_size > 1000, "Source recording is missing or unexpectedly small"
-          print("Verified seven generated MP3 files:")
-          for path, size in files:
-              print(f"{path}: {size:,} bytes")
-          print(f"Original IslamHouse MP3: {source.stat().st_size:,} bytes")
-          print(f"Manifest entries for Al-Fatiha: {sum(1 for k in manifest if k.startswith('1:'))}")
+          assert source.is_file() and source.stat().st_size > 1000, "Source recording missing"
+          print("Verified seven generated MP3 files and source recording.")
           PY
 
       - name: Build a local listening page
@@ -74,22 +67,24 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           root = Path("generated-audio")
-          cards = ['<section><h2>Исходная запись IslamHouse</h2><audio controls preload="none" src="source/ru_Quran_Russian_001.mp3"></audio><p><a href="source/ru_Quran_Russian_001.mp3" download>Скачать исходный MP3</a></p></section>']
+          cards = ['<section><h2>Исходная запись IslamHouse</h2><audio controls preload="none" src="source/ru_Quran_Russian_001.mp3"></audio></section>']
           for ayah in range(1, 8):
-              cards.append(f"""
-              <section><h2>Синтезированный аят {ayah}</h2>
-                <audio controls preload="none" src="ru/1/{ayah}.mp3"></audio>
-                <p><a href="ru/1/{ayah}.mp3" download>Скачать MP3</a></p>
-              </section>""")
-          html = """<!doctype html>
-          <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-          <title>Аят — тест русской озвучки Аль-Фатихи</title>
-          <style>body{font:17px system-ui,sans-serif;max-width:760px;margin:24px auto;padding:0 16px;line-height:1.5}section{padding:12px 0;border-bottom:1px solid #ddd}audio{width:100%}</style>
-          </head><body><h1>Аль-Фатиха — тест русской озвучки</h1>
-          <p>Сравнение исходной записи с тестовым синтезом Edge TTS. Это локальная страница внутри артефакта; она не публикуется в основной версии приложения.</p>
-          """ + "\n".join(cards) + "</body></html>"
+              cards.append(f'<section><h2>Синтезированный аят {ayah}</h2><audio controls preload="none" src="ru/1/{ayah}.mp3"></audio></section>')
+          html = '<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Аят — тест русской озвучки</title><style>body{font:17px system-ui;max-width:760px;margin:24px auto;padding:0 16px;line-height:1.5}section{padding:12px 0;border-bottom:1px solid #ddd}audio{width:100%}</style></head><body><h1>Аль-Фатиха — тест русской озвучки</h1>' + ''.join(cards) + '</body></html>'
           (root / "preview.html").write_text(html, encoding="utf-8")
           PY
+
+      - name: Publish only test MP3 assets to the experiment branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated-audio/ru generated-audio/manifest.json generated-audio/preview.html
+          if git diff --cached --quiet; then
+            echo "No generated audio changes to commit."
+          else
+            git commit -m "Add generated Al-Fatiha audio for isolated integration test"
+            git push origin HEAD:experiment/russian-audio-translation
+          fi
 
       - name: Upload source and test package
         uses: actions/upload-artifact@v4
