@@ -76,10 +76,17 @@ function speakList(list){
  speaking=true;try{rec.stop()}catch(e){}
  const go=i=>{if(i>=list.length||!on){speaking=false;if(on&&!paused)startRec();render();return}
   shown=V[list[i]];render();if(!$('audioToggle').checked){setTimeout(()=>go(i+1),1000);return}
+  try{speechSynthesis.resume()}catch(e){}
   const u=new SpeechSynthesisUtterance(shown.ru);u.lang='ru-RU';
-  const vo=speechSynthesis.getVoices().find(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));if(vo)u.voice=vo;
-  let advanced=false;const next=()=>{if(advanced)return;advanced=true;setTimeout(()=>go(i+1),1000)};
-  u.onend=next;u.onerror=next;speechSynthesis.speak(u)};
+  let voices=[];try{voices=speechSynthesis.getVoices()}catch(e){}
+  const vo=voices.find(z=>z.lang&&z.lang.toLowerCase().startsWith('ru'));if(vo)u.voice=vo;
+  let advanced=false,watchdog=null;const next=()=>{if(advanced)return;advanced=true;if(watchdog)clearTimeout(watchdog);setTimeout(()=>go(i+1),700)};
+  u.onend=next;u.onerror=next;u.onstart=()=>{if(watchdog)clearTimeout(watchdog);watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(7000,shown.ru.length*180))};
+  watchdog=setTimeout(()=>{try{speechSynthesis.resume()}catch(e){}},1800);
+  speechSynthesis.speak(u);
+  if(!watchdog)watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(9000,shown.ru.length*220));
+  else {clearTimeout(watchdog);watchdog=setTimeout(()=>{try{speechSynthesis.cancel()}catch(e){}next()},Math.max(9000,shown.ru.length*220))}
+ };
  go(0)}
 function startRec(){
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$('st').textContent='Браузер не поддерживает распознавание речи';return}
@@ -91,9 +98,10 @@ function readJournal(){try{const rows=JSON.parse(localStorage.getItem('ayat-comp
 function saveCompleted(list){let rows=[];try{rows=JSON.parse(localStorage.getItem('ayat-completed-v1')||'[]')}catch(e){}const now=new Date(),date=now.toLocaleDateString('ru-RU'),time=now.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});list.forEach(i=>{if(i==null||!V[i])return;const x=V[i],text='Сура '+x.s+': Аят '+x.a+' | '+date+' '+time+' | Точность '+Math.round(Math.max(0,Math.min(1,lastAccuracy))*100)+'%';rows.push({text,ts:now.getTime()})});try{localStorage.setItem('ayat-completed-v1',JSON.stringify(rows))}catch(e){}readJournal()}
 async function requestWakeLock(){if(!('wakeLock'in navigator)||!on||paused)return;try{wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}catch(e){}}
 function releaseWakeLock(){if(wakeLock){try{wakeLock.release()}catch(e){}wakeLock=null}}
+function unlockSpeech(){try{if(!('speechSynthesis'in window)||typeof SpeechSynthesisUtterance==='undefined')return;const u=new SpeechSynthesisUtterance(' ');u.lang='ru-RU';u.volume=0;u.onend=()=>{};speechSynthesis.speak(u)}catch(e){}}
 $('btn').onclick=()=>{
- if(paused){paused=false;on=true;startRec();render();return}
- if(!on){on=true;v=null;ptr=0;exp=null;queue=[];shown=null;heard='';log('старт');startRec()}
+ if(paused){unlockSpeech();paused=false;on=true;startRec();render();return}
+ if(!on){unlockSpeech();on=true;v=null;ptr=0;exp=null;queue=[];shown=null;heard='';log('старт');startRec()}
  else{on=false;paused=false;speechSynthesis.cancel();speaking=false;clearTimeout(timer);releaseWakeLock();try{rec.stop()}catch(e){}log('стоп');$('st').textContent=''}
  render()};
 $('lg').onclick=()=>{const b=$('box');b.style.display=b.style.display==='block'?'none':'block';if(b.style.display==='block')readJournal()};
