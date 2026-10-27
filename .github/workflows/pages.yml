@@ -1,0 +1,102 @@
+name: Deploy Ayat to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate required files and manifest
+        run: |
+          test -s index.html
+          test -s manifest.json
+          test -s sw.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("manifest.json").read_text(encoding="utf-8"))
+          assert manifest.get("name"), "manifest.json is missing name"
+          assert manifest.get("start_url"), "manifest.json is missing start_url"
+          html = Path("index.html").read_text(encoding="utf-8")
+          assert "<html" in html.lower(), "index.html has no html element"
+          assert "</html>" in html.lower(), "index.html appears truncated"
+          print(f"HTML bytes: {len(html.encode('utf-8'))}; manifest valid")
+          PY
+
+      - name: Check inline JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import subprocess, tempfile, os
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.current = None
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script":
+                      attrs = dict(attrs)
+                      kind = attrs.get("type", "").lower()
+                      if kind in ("", "text/javascript", "application/javascript", "module"):
+                          self.current = []
+                      else:
+                          self.current = None
+              def handle_data(self, data):
+                  if self.current is not None:
+                      self.current.append(data)
+              def handle_endtag(self, tag):
+                  if tag.lower() == "script":
+                      if self.current is not None:
+                          code = "".join(self.current).strip()
+                          if code:
+                              self.parts.append(code)
+                      self.current = None
+
+          parser = Scripts()
+          parser.feed(Path("index.html").read_text(encoding="utf-8"))
+          if not parser.parts:
+              raise SystemExit("No inline JavaScript blocks found to check")
+          for i, code in enumerate(parser.parts, 1):
+              path = f"/tmp/ayat-inline-{i}.js"
+              Path(path).write_text(code, encoding="utf-8")
+              subprocess.run(["node", "--check", path], check=True)
+          print(f"JavaScript syntax passed for {len(parser.parts)} inline script block(s)")
+          PY
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
