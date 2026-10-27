@@ -1,0 +1,19 @@
+{
+  "name": "Аят — чтение с распознаванием",
+  "short_name": "Аят",
+  "description": "Практика чтения аятов с распознаванием арабской речи и русским переводом",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#17191b",
+  "theme_color": "#17191b",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
