@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17191b">
+<title>Аят — интеграционный тест русской озвучки</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#17191b;color:#f1f0eb}
+body{margin:0;padding:16px;max-width:900px;margin-inline:auto}
+.note{background:#202326;border:1px solid #34383b;border-radius:12px;padding:14px;margin-bottom:14px;line-height:1.5}
+iframe{width:100%;height:calc(100dvh - 190px);min-height:620px;border:1px solid #34383b;border-radius:12px;background:#17191b}
+small{color:#a0a5a8}
+</style>
+</head>
+<body>
+<section class="note">
+<strong>Экспериментальная озвучка — Аль-Фатиха</strong>
+<p>Нажмите «Начать» внутри приложения и читайте арабский текст. Когда приложение определит завершение аята, вместо системного русского голоса должен прозвучать заранее подготовленный MP3 этого аята.</p>
+<small>Пока подготовлены только 7 аятов Аль-Фатихи. Остальные аяты остаются на штатном синтезе. Это отдельная тестовая страница; основной экран приложения и защищённый репозиторий не меняются.</small>
+<div id="testStatus" role="status">Подготавливаю аудиоперехват…</div>
+</section>
+<iframe id="app" title="Экспериментальная версия Аят" src="https://raw.githack.com/Hamat8606/ayat-updated/experiment/russian-audio-translation/index.html" allow="microphone"></iframe>
+<script>
+(() => {
+const frame=document.getElementById('app');
+const status=document.getElementById('testStatus');
+const verseAudio=new Map([
+["Во имя Аллаха, Милостивого, Милосердного!",1],
+["Хвала Аллаху, Господу миров,",2],
+["Милостивому, Милосердному,",3],
+["Властелину Дня воздаяния!",4],
+["Тебе одному мы поклоняемся и Тебя одного молим о помощи.",5],
+["Веди нас прямым путем,",6],
+["путем тех, кого Ты облагодетельствовал, не тех, на кого пал гнев, и не заблудших.",7]
+]);
+let activeAudio=null,patched=false;
+function stopAudio(){if(activeAudio){activeAudio.onended=null;activeAudio.onerror=null;try{activeAudio.pause();activeAudio.currentTime=0}catch(e){}activeAudio=null}}
+frame.addEventListener('load',()=>{
+ try{
+  const w=frame.contentWindow,d=frame.contentDocument;
+  if(!w||!d||!w.speechSynthesis)throw new Error('Недоступно управление аудио внутри приложения');
+  const synth=w.speechSynthesis,originalSpeak=synth.speak.bind(synth),originalCancel=synth.cancel.bind(synth);
+  synth.speak=function(utterance){
+   const tr=d.getElementById('tr');
+   const text=(tr?.textContent||'').replace(/\s+/g,' ').trim();
+   const ayah=verseAudio.get(text);
+   if(!ayah){originalSpeak(utterance);return}
+   stopAudio();
+   const a=new w.Audio('https://raw.githubusercontent.com/Hamat8606/ayat-updated/experiment/russian-audio-translation/generated-audio/ru/1/'+ayah+'.mp3');
+   activeAudio=a;
+   let completed=false;
+   const finish=()=>{if(completed)return;completed=true;if(activeAudio===a)activeAudio=null;if(typeof utterance.onend==='function')utterance.onend(new w.SpeechSynthesisEvent('end',{utterance}));};
+   a.onended=finish;
+   a.onerror=()=>{status.textContent='Не удалось загрузить MP3 аята '+ayah+'. Проверьте интернет; перехожу к системному голосу.';if(activeAudio===a)activeAudio=null;originalSpeak(utterance)};
+   if(typeof utterance.onstart==='function')utterance.onstart(new w.SpeechSynthesisEvent('start',{utterance}));
+   status.textContent='Подключена заготовленная озвучка: Аль-Фатиха, аят '+ayah;
+   a.play().catch(()=>{if(activeAudio===a)activeAudio=null;status.textContent='Браузер не запустил MP3; использую системный голос.';originalSpeak(utterance)});
+  };
+  synth.cancel=function(){stopAudio();originalCancel()};
+  patched=true;status.textContent='Готово. Теперь можно нажать «Начать» и читать Аль-Фатиху на арабском.';
+ }catch(e){status.textContent='Не удалось включить тестовый режим: '+e.message+'. Откройте страницу в Safari и разрешите микрофон.'}
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAudio()});
+})();
+</script>
+</body>
+</html>
