@@ -1,0 +1,40 @@
+name: Validate Russian audio experiment
+on:
+  push:
+    branches:
+      - experiment/russian-audio-translation
+    paths:
+      - 'tools/**'
+      - 'index.html'
+      - '.github/workflows/validate-russian-audio.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install generator dependency
+        run: python -m pip install edge-tts
+      - name: Check Python syntax
+        run: python -m py_compile tools/generate_ru_audio.py
+      - name: Check CLI
+        run: python tools/generate_ru_audio.py --help
+      - name: Check embedded translation data
+        run: |
+          python - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          spec = importlib.util.spec_from_file_location("audio_generator", "tools/generate_ru_audio.py")
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+          verses = module.load_verses()
+          assert len(verses) > 6000, f"Unexpected verse count: {len(verses)}"
+          assert verses[0]["surah"] == 1 and verses[0]["ayah"] == 1
+          assert verses[0]["text"], "First translation is empty"
+          assert any(v["surah"] == 114 and v["ayah"] == 6 for v in verses)
+          print(f"Validated {len(verses)} translation entries; sample: {verses[0]}")
+          PY
